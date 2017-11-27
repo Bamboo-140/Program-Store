@@ -9,8 +9,11 @@ typedef struct Node
   ElemType data;
   struct Node *next;
   struct Node *pre;
-};
+}ListNode;
 
-struct Node InitList(&List);
-int ListEmpty(List);
-
+ListNode InitList(ListNode *List);
+int ListEmpty(ListNode List);
+ListNode ClearList(ListNode *List);
+int LocateElem(ListNode List,ElemType e);
+ElemType GetElem(ListNode List,int serial,ElemTyped *e);
+ListNode ListInsert(ListNode *List,int serial,ElemType e);
