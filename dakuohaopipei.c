@@ -8,20 +8,31 @@ int main(int argc,char *argv[])
     fp = fopen("test.c","r");
     char ch;    //接受文件输入
     int inString = 0;    //字符串开关
+    int inChar = 0;    //字符开关
     int inZhushi = 0;    //注释开关 1:可能是注释，2:单行注释，3:多行注释
     int temp = 0;   //多行注释辅助开关
     int state = 0;    //判断大括号是否成对，大于0 则缺少尾括号，如果小于0则缺少首括号。
 
     while( ( ch = fgetc(fp) ) != EOF)
     {
-        if ((ch == '\"' && 0 == inString) || (1 == inString) && (ch != '\"'))
+        if (((ch == '\"') && 0 == inString) || (1 == inString) && (ch != '\"'))    //字符串中的
         {
             inString = 1;
             //continue;
         }
-        else if(1 == inString && ch =='\"')
+        else if(1 == inString && (ch =='\"'))
             {
                 inString = 0;
+                continue;
+            }
+        if (((ch == '\'') && 0 == inChar) || (1 == inChar) && (ch != '\''))     //字符中的
+        {
+            inChar = 1;
+            //continue;
+        }
+        else if(1 == inChar && (ch =='\''))
+            {
+                inChar = 0;
                 continue;
             }
             if(ch =='/' && 0 == inZhushi)    //如果不处于任何注释状态遇到了'/'
@@ -60,7 +71,7 @@ int main(int argc,char *argv[])
             }
             else if(3 == inZhushi && 1 == temp)
                 temp = 0;
-            if (inZhushi > 1 || inString != 0)
+            if (inZhushi > 1 || inString != 0 || inChar != 0)
                 continue;
 
         putchar(ch);
