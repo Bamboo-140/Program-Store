@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define MAX_LENGHT 32
-/// 不知道为什么输入64出问题 ///
+/// 不知道为什么输入64出问题，可能由于我用的是32位编译器 ///
 
 long long int getval(void);
 void fillarray(int *arr,int value);
@@ -35,7 +35,7 @@ int main(void)
             }
             i++;
         }
-        while((value >>= 1) != 0);             //数值右移直到值为零,每左移一位,值除以2一次
+        while((value >>= 1) != 0);             //数值右移直到值为零,每右移一位,其值除以2一次
         creatbuma(fanma);
         for(int j = MAX_LENGHT - 1;j >= 0 ;j --)    //反向输出数组
         {
@@ -97,4 +97,14 @@ void creatbuma(int *fanma)
         else
             break;
     }
+}
+
+
+/// 递归输出参数二进制 ///
+void to_binary(int value)
+{
+    if(value != 0)
+        to_binary(value>>1);
+    if(value)    //避免首位为零
+        printf ("%d",(value&1));
 }
