@@ -1,0 +1,181 @@
+[/code]1、自己写的一个FTP 漏洞多多  账号[/color][/size][size=5][color=darkred]密码也没有验证   Socket类自己封装的有不组 请指教/[/color][/size]
+[size=5][color=#8b0000]
+[/color][/size]
+
+[code]#define _CRT_SECURE_NO_WARNINGS
+#include"Sockets.h"
+#include<iostream>
+#include<string>
+#include<io.h>
+using namespace std;Sockets m_sockp, m_sockt;int User(const char*sData, Sockets*pSock)//帐号匹配区
+{
+ cout << "验证账号成功" << endl;
+ const char* sSucc = "331 帐号存在,发密码过来\r\n";
+ pSock->Send(sSucc, strlen(sSucc));
+ return TRUE;
+}
+int Pass(const char*Data, Sockets*pSock)//密码匹配区
+{
+ cout << "验证密码成功" << endl;
+ const char*sPass = "230 帐号密码全都匹配\r\n";
+ pSock->Send(sPass, strlen(sPass));
+ return TRUE;
+}int Opts(char*pData, Sockets*pSock)
+{//设置宽字节  （UINCODE ：a,b,c,2,5...）两个字节
+ cout << "编码设置成功" << endl;
+ const char* sSuc = "502 编码设置成功\r\n";
+ pSock->Send(sSuc, strlen(sSuc));
+ return TRUE;
+}
+int Pwd(char* pData, Sockets*pSock)
+{
+ cout << "当前的目录设置成功" << endl;
+ const char *sSucc = "257 \"/\"是当前的目录\r\n";
+ pSock->Send(sSucc, strlen(sSucc));
+ return TRUE;
+}
+int Type(char* pData, Sockets*pSock)
+{
+ cout << "设置好了读写模式成功" << endl;
+ const char *sSucc = "200 设置好了读写模式\r\n";
+ pSock->Send(sSucc, strlen(sSucc));
+ return TRUE;
+}
+//change work dir 改变工作目录
+int Cwd(char* pData, Sockets*pSock)
+{
+ cout << "\"/\"路劲设置好成功" << endl;
+ const char*sSucc = "250 \"/\"路劲设置好\r\n";
+ pSock->Send(sSucc, strlen(sSucc));
+ return TRUE;
+}
+int Pasv(char* pData, Sockets*pSock)
+{
+ m_sockp.Close();
+ if (!m_sockp.Create())
+ {
+  const char* sSucc = "425 数据通道创建失败\r\n";
+  return pSock->Send(sSucc, strlen(sSucc))>0;
+ }
+ char szIP[20];
+ UINT nPort;
+ pSock->GetSockName(szIP, nPort);
+ char *p = szIP;
+ while (p = strchr(p, '.'))
+  *p = ',';
+ string str = szIP;
+ str += ',';
+ m_sockp.GetSockName(szIP, nPort);
+ sprintf(szIP, "%d", HIBYTE(nPort));
+ str += szIP;
+ sprintf(szIP, "%d", LOBYTE(nPort));
+ str += ',';
+ str += szIP;
+ cout << "已经进入Pasv模式(" + str + ")成功" << endl;
+ str = "227 已经进入Pasv模式(" + str + ")\r\n";
+ pSock->Send(str.c_str(), str.length());
+ m_sockp.Listen();
+ m_sockp.Accept(m_sockt);
+ return TRUE;
+}
+int List(char* pData, Sockets*pSock)
+{
+ string str;
+ _finddata_t fd;
+ long lf = _findfirst("d:\\user\\test\\*.*", &fd);//用户目录的根相对路径 str = "150 File status okay\r\n";
+ pSock->Send(str.c_str(), str.length());
+ if (-1 != lf)
+ {
+  do {
+   str = (fd.attrib & _A_SUBDIR) ? 'd' : '-';
+   str += "rwxrwxrwx 1 ";
+   str += "test ";
+   str += " nogroup ";
+   char szSize[15];
+   sprintf(szSize, "%d ", fd.size);
+   str += szSize;
+   str += "Sep 2 02:20 ";
+   //str += "Sep 2 02:20 ";
+   str += fd.name;
+   str += "\r\n";
+   m_sockt.Send(str.c_str(), str.length());
+  } while (!_findnext(lf, &fd));
+  _findclose(lf);
+ }
+ m_sockp.Close();
+ m_sockt.Close();
+ cout << "Tranfe finished successfully Data connection"<<str.c_str()<< endl;
+ str = "226 Tranfe finished successfully Data connection\r\n";
+ return pSock->Send(str.c_str(), str.length())>0;
+}int Protocal(char* sData, char *sKey, Sockets*pSock)//信息匹配区
+{ if (!strcmp("USER", sKey))
+  return User(sData, pSock);
+ if (!strcmp("PASS", sKey))
+  return Pass(sData, pSock);
+ if (!strcmp("OPTS", sKey))//编码模式
+  return Opts(sData, pSock);
+ if (!strcmp("PWD", sKey))
+  return Pwd(sData, pSock);
+ if (!strcmp("TYPE", sKey))
+  return Type(sData, pSock);
+ if (!strcmp("CWD", sKey))
+  return Cwd(sData, pSock);
+ if (!strcmp("PASV", sKey))
+  return Pasv(sData, pSock);
+ if (!strcmp("LIST", sKey))
+  return List(sData, pSock);
+ return FALSE;
+}
+void OnReciv(Sockets*pSock)//信息接受裁剪区
+{
+ char s[2048];
+ int n = 0;
+ while (true)
+ {
+  n = pSock->Receive(s, sizeof(s));
+  if (n <= 0)
+   break;
+  s[n] = 0;
+  cout << s << endl;
+  char* sKey = strtok(s, " \r"); //空格或者|r
+  if (sKey)
+   _strupr(sKey);
+  char * sData = strtok(NULL, "\r");
+  if (sData)cout << sData << endl;  Protocal(sData, sKey, pSock);
+ }
+}int main()
+{
+ Sockets sock;
+ system("title FTP测试版");
+ system("color 2F");
+ cout << "打开你的计算机,在上面的路劲里输入:  ftp://你的ip地址 进去后右键登录" << endl;
+ cout << "帐号test" << "：" << "密码pas123  不区分大小写" << endl;
+ if (!sock.Create(21))
+ {
+  cout << "端口被占用" << GetLastError() << endl;
+  system("pause");
+  return -1;
+ }
+ sock.Listen();
+ Sockets *pSock = new Sockets;
+ //send 1 发送  220 告诉他登录了
+ const char *sWelc = "220 你好欢迎你登录ftp服务器!\r\n";
+ while (sock.Accept(*pSock))
+ {
+  pSock->Send(sWelc, strlen(sWelc));
+  OnReciv(pSock);
+  pSock = new Sockets;
+ }
+ delete pSock;
+ pSock = NULL;
+ return 0;
+}
+
+
+
+
+
+
+
+
+
